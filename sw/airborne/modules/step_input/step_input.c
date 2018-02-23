@@ -22,7 +22,6 @@
  * @author SihaoSun
  * Module containing step input functions with user defined magnitude and frequency
  */
-
 #include "modules/step_input/step_input.h"
 #include "stdio.h"
 #include "state.h"
@@ -31,6 +30,7 @@
 bool step_input_flag;
 float temp;
 int8_t step_num;
+float a;
 
 void init_step_input(void){
 	step_num = 0;
@@ -43,9 +43,31 @@ bool step_input_status(void){
 }
 
 void periodic_step_input(void){
-	if (step_num <= 0)
+	if (step_num <= 0){
 		step_input_flag = true;
-}
+	}
+	temp += 1.0/PERIODIC_FREQUENCY;
+	//printf("%f\n", temp);
+	if (temp<=0.1){
+		a = 0;
+	}
+	else if (temp<5){
+		a = 12000;
+	}
+	else if (temp<5.1){
+		a = 0;
+	}
+	else
+	{
+		a = 0;
+		step_num++;
+		temp = 0;
+		step_input_flag = false;
+		//init_step_input();
+	}
+	}
+
+
 
 void call_step_input(float *output, float magnitude, float t1, float t2, float t3){
 

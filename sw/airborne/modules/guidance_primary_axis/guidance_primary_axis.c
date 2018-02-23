@@ -222,7 +222,7 @@ else if (autopilot.mode == AP_MODE_NAV){
 	nd_i_state.y =  nd_i_state.y/norm_nd; 	
 	nd_i_state.z =  nd_i_state.z/norm_nd;
 
-	//psi = -27.0/57.3;
+/*	//psi = -27.0/57.3;
 	if(step_input_status() == true && (autopilot.mode == AP_MODE_ATTITUDE_Z_HOLD || autopilot.mode == AP_MODE_NAV))
 	{
 		call_step_input(&nx_desire_step, 0.342, 0.1, 0.6, 1.2); //30deg
@@ -231,7 +231,7 @@ else if (autopilot.mode == AP_MODE_NAV){
 		nd_i_state.y = y_desire;
 		nd_i_state.z = -sqrtf(1.0-x_desire*x_desire);
 		psi = 0.0;
-	}	
+	}	*/
 
 	struct FloatMat33 R_BI;
 	MAT33_ELMT(R_BI,0,0) = cos(theta)*cos(psi);
