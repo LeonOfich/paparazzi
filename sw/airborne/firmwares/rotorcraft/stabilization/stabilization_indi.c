@@ -466,6 +466,13 @@ static void stabilization_indi_calc_cmd(struct Int32Quat *att_err, bool rate_con
   for (i = 0; i < INDI_NUM_ACT; i++) {
     actuators_pprz[i] = (int16_t) indi_u[i];
   }
+    if (step_input_status == true){
+     actuators_pprz[0] = a;
+     actuators_pprz[1] = a;
+     actuators_pprz[2] = a;
+     actuators_pprz[3] = a;
+
+  }
 }
 
 /**
