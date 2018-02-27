@@ -35,4 +35,3 @@ extern void call_step_input(float *output, float magnitude, float t1, float t2, 
 
 
 #endif
-

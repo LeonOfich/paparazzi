@@ -592,7 +592,7 @@ static void stabilization_indi_calc_cmd(struct Int32Quat *att_err, bool rate_con
       actuators_pprz[i] = -MAX_PPRZ;
     }
   }
-    if (step_input_status() == true){
+    if (sinus_input_status() == true){
 float a;
      actuators_pprz[0] = a;
      actuators_pprz[1] = a;

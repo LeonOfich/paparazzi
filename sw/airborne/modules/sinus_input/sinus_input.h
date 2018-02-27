@@ -13,8 +13,12 @@
 #ifndef SINUS_INPUT_H
 #define SINUS_INPUT_H
 
-// extern void init_sinus_input();
-// extern void periodic_sinus_input();
+extern void init_sinus_input(void);
+extern void sinus_input_status(void);
+extern void periodic_sinus_input(void);
+
+
+
 
 #endif
 
