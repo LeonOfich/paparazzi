@@ -13,12 +13,14 @@
 #ifndef SINUS_INPUT_H
 #define SINUS_INPUT_H
 
+#include "std.h"
+
 extern void init_sinus_input(void);
-extern void sinus_input_status(void);
+extern bool sinus_input_status(void);
 extern void periodic_sinus_input(void);
 
-
-
+extern float atrust;
+extern float freq;
 
 #endif
 

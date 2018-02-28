@@ -48,6 +48,7 @@
 #include "modules/sliding_mode_observer/sliding_mode_observer.h"
 #include "modules/attitude_optitrack/attitude_optitrack.h"
 #include <stdio.h>
+#include "modules/sinus_input/sinus_input.h"
 
 //only 4 actuators supported for now
 #define INDI_NUM_ACT 4
@@ -592,12 +593,12 @@ static void stabilization_indi_calc_cmd(struct Int32Quat *att_err, bool rate_con
       actuators_pprz[i] = -MAX_PPRZ;
     }
   }
+
     if (sinus_input_status() == true){
-float a;
-     actuators_pprz[0] = a;
-     actuators_pprz[1] = a;
-     actuators_pprz[2] = a;
-     actuators_pprz[3] = a;
+     actuators_pprz[0] = atrust;
+     actuators_pprz[1] = atrust;
+     actuators_pprz[2] = atrust;
+     actuators_pprz[3] = atrust;
 
   }
 
@@ -703,7 +704,6 @@ float a;
         call_sliding_mode_observer(SMDO_z_dot, Error, K, Ks, 4);
       }
     }
-
 }
 
 /**
