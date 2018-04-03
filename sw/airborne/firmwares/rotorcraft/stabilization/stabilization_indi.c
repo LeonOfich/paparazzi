@@ -29,7 +29,7 @@
  * Dynamic Inversion for Attitude Control of Micro Aerial Vehicles
  * http://arc.aiaa.org/doi/pdf/10.2514/1.G001490
  */
-
+#include "firmwares/rotorcraft/autopilot_utils.h"
 #include "firmwares/rotorcraft/stabilization/stabilization_indi.h"
 #include "firmwares/rotorcraft/stabilization/stabilization_attitude.h"
 #include "firmwares/rotorcraft/stabilization/stabilization_attitude_rc_setpoint.h"
@@ -46,6 +46,10 @@
 #include "modules/actuator_terminator/actuator_terminator.h"
 #include "modules/sliding_mode_observer/sliding_mode_observer.h"
 #include "modules/attitude_optitrack/attitude_optitrack.h"
+
+#include "modules/single_failure/single_failure.h"
+#include "modules/double_failure/double_failure.h"
+
 #include <stdio.h>
 
 //only 4 actuators supported for now
@@ -71,6 +75,7 @@ static void calc_g2_element(float dx_error, int8_t j, float mu_extra);
 static void calc_g1g2_pseudo_inv(void);
 static void bound_g_mat(void);
 static void calc_g1_inv_damage(void);
+static void calc_g1_inv_damage2(void);
 
 int32_t stabilization_att_indi_cmd[COMMANDS_NB];
 struct ReferenceSystem reference_acceleration = {
@@ -548,7 +553,10 @@ static void stabilization_indi_calc_cmd(struct Int32Quat *att_err, bool rate_con
   indi_v[3] = v_thrust;
 
 #if SMC_TEST_NOMINAL
+  #warning "SMC_TEST_NOMINAL"   
+
   #if SMC_TEST_NDI_USED
+ 
   float k_sigma[4]  = {1.0,1.0,1.0,1.5}; //ndi nominal
   indi_use_ndi =   1-autopilot_mode_status;
   #else
@@ -557,6 +565,7 @@ static void stabilization_indi_calc_cmd(struct Int32Quat *att_err, bool rate_con
   #endif
 #else
   #if SMC_TEST_NDI_USED
+    #warning "SMC_TEST_NDI_USED"  
   float k_sigma[4]  = {1.2,1.2,1.2,1.6}; //ndi
   indi_use_ndi =   1-autopilot_mode_status;
   #else
@@ -585,7 +594,9 @@ static void stabilization_indi_calc_cmd(struct Int32Quat *att_err, bool rate_con
                  + (g1g2_pseudo_inv[i][3] * indi_v[3]);
   }
 
-  if (damage_status())
+if (autopilot_mode_status == 0){
+
+  if (single_failure_status())
   {
     indi_du[DAMAGED_ROTOR_INDEX] = 0;
     int8_t i0 = 0;
@@ -598,6 +609,30 @@ static void stabilization_indi_calc_cmd(struct Int32Quat *att_err, bool rate_con
       }
     }
   }
+  else if (double_failure_status()){
+    indi_du[DAMAGED_ROTOR_INDEX]  = 0;
+    indi_du[DAMAGED_ROTOR_INDEX2] = 0;
+    int8_t i0 = 0;
+// hardcode it for now
+    indi_du[0] = (g1_damage_inv2[0][0] * indi_v[0]) +(g1_damage_inv2[0][1] * indi_v[3]);
+    indi_du[2] = (g1_damage_inv2[1][0] * indi_v[0]) +(g1_damage_inv2[1][1] * indi_v[3]);
+    // printf("%2.2f\t %2.2f\t %2.2f\t %2.2f\n",g1_damage_inv2[0][0],g1_damage_inv2[0][1], g1_damage_inv2[1][0],g1_damage_inv2[1][1]);
+/*    for (i = 0; i < INDI_NUM_ACT; i++){
+      if ((i != DAMAGED_ROTOR_INDEX) || (i != DAMAGED_ROTOR_INDEX2)) {
+        indi_du[i] = (g1_damage_inv2[i0][0] * indi_v[0])
+                    +(g1_damage_inv2[i0][1] * indi_v[3]);
+      i0++;
+      }
+      else {
+        indi_du[i] = 0;
+      }
+    }*/
+// printf("%2.2f\t %2.2f\t %2.2f\t %2.2f\n",g1_damage_inv2[0][0],g1_damage_inv2[0][1], g1_damage_inv2[1][0],g1_damage_inv2[1][1]);
+    
+  }
+}
+printf("%2.2f\t%2.2f\t%2.2f\t%2.2f\n",indi_du[0],indi_du[1],indi_du[2],indi_du[3]);
+
 #else
   // WLS Control Allocator
   num_iter =
@@ -659,14 +694,27 @@ static void stabilization_indi_calc_cmd(struct Int32Quat *att_err, bool rate_con
   }
 
   /*Commit the actuator command*/
-  for (i = 0; i < INDI_NUM_ACT; i++) {
+/*  for (i = 0; i < INDI_NUM_ACT; i++) {
     actuators_pprz[i] = (int16_t) indi_u[i];
     //actuators_pprz[i] = -MAX_PPRZ;
     if ((i == DAMAGED_ROTOR_INDEX ) && damage_status()){
       actuators_pprz[i] = -MAX_PPRZ;
     }
-  }
+  }*/
 
+  for (i = 0; i < INDI_NUM_ACT; i++) {
+    actuators_pprz[i] = (int16_t) indi_u[i];
+    //actuators_pprz[i] = -MAX_PPRZ;
+    if (autopilot_mode_status == 0){
+    if ((i == DAMAGED_ROTOR_INDEX ) && single_failure_status()){
+      actuators_pprz[i] = -MAX_PPRZ;
+    }
+    if (((i == DAMAGED_ROTOR_INDEX2) || (i == DAMAGED_ROTOR_INDEX) ) && double_failure_status()){
+      actuators_pprz[i] = -MAX_PPRZ;
+
+       }
+    }
+  }
   
 //////////////////////////////// NDI ////////////////////////////////////////
 
@@ -1057,6 +1105,46 @@ void calc_g1_inv_damage(void)
 //                    , g1_damage_inv[1][0], g1_damage_inv[1][1], g1_damage_inv[1][2]
 //                    , g1_damage_inv[2][0], g1_damage_inv[2][1], g1_damage_inv[2][2]);
 
+}
+
+/**
+ * Function that calculates the pseudo-inverse of (G1+G2).
+ */
+void calc_g1_inv_damage2(void)
+{
+    int i0 = 0,j0 = 0;
+    for (int i = 0; i < 4; i++) // loop over states
+    {
+      if (i != 2 || i != 1) // Added the '1' channel for the pitch control
+      {
+        j0 = 0;
+        for (int j = 0; j < 4; j++) // Set j < 3 instead of <4 prevents a lot of errors
+        {
+          // This invokes warning: [-Waggressive-loop-optimizations]
+          // A simple fix would be to hardcode it 
+          if (j != DAMAGED_ROTOR_INDEX || j != DAMAGED_ROTOR_INDEX2) // 1 and 3
+          { 
+            g1_damage2[i0][j0] = g1[i][j]/INDI_G_SCALING;
+            // ends up with a 2x2 matrix
+            
+            j0++;
+            
+              
+          }
+        }
+        
+        i0++;
+        
+      }
+    }
+  MAT_INV22(g1_damage_inv2,g1_damage2);
+
+/*  printf("%2.1f %2.1f\n%2.1f %2.1f\n"
+    ,   g1_damage2[0][0],  g1_damage2[0][1]
+    ,   g1_damage2[1][0],  g1_damage2[1][1] );
+  printf("%6.5f %6.5f\n%6.5f %6.5f\n"
+                    , g1_damage_inv2[0][0], g1_damage_inv2[0][1]
+                    , g1_damage_inv2[1][0], g1_damage_inv2[1][1]);*/
 }
 
 /**

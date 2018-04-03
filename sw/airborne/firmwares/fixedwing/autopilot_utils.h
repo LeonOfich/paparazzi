@@ -25,6 +25,7 @@
  * Utility functions and includes for autopilots
  *
  */
+extern bool autopilot_mode_status;	
 
 #ifndef AUTOPILOT_UTILS_H
 #define AUTOPILOT_UTILS_H
@@ -42,7 +43,6 @@
 /** Stick pushed
  */
 #define STICK_PUSHED(pprz) (pprz < THRESHOLD1 || pprz > THRESHOLD2)
-
 /** pprz_t to float with saturation
  */
 #define FLOAT_OF_PPRZ(pprz, center, travel) ((float)pprz / (float)MAX_PPRZ * travel + center)
